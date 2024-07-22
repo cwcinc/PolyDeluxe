@@ -1,0 +1,21 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "BuildPolytrack",
+            "type": "shell",
+            "command": "C:/Users/camzi/OneDrive/Documents/ModdedPolytrack/PolyTrack.exe",
+            "dependsOn": ["PackAsar"],
+            "dependsOrder": "sequence",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "PackAsar",
+            "type": "shell",
+            "command": "asar pack infiniteblocks app.asar",
+        }
+    ]
+}

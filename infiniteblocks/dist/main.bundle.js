@@ -30,8 +30,8 @@ var global_mods = {
             "WheelBR": [-.720832*this.CAR_WIDTH_MULT, .27*this.CAR_HEIGHT_MULT, -1.52686*this.CAR_LENGTH_MULT]
         }
     },
-    
-    loadMod(template, custom={}) { // doesnt impact editor
+
+    loadMod(template, update=true, custom={}) { // doesnt impact editor
         switch (template) {
             case "default":
                 this.CAR_MODEL_PATH = "models/car.glb";
@@ -51,7 +51,7 @@ var global_mods = {
                 OUTPUT("Loading default");
                 break;
             case "polycycle":
-                this.loadMod("default");
+                this.loadMod("default", false);
                 this.CAR_WIDTH_MULT = 0.1;
                 this.CAR_MODEL_PATH = "models/0.1xpolycar.glb";
                 this.ROLL_INFLUENCE = 0;
@@ -60,7 +60,7 @@ var global_mods = {
                 OUTPUT("Loading polycycle");
                 break;
             case "widepolycar":
-                this.loadMod("default");
+                this.loadMod("default", false);
                 this.CAR_WIDTH_MULT = 3;
                 this.CAR_MODEL_PATH = "models/3xpolycar.glb";
                 this.ROLL_INFLUENCE = 2;
@@ -69,7 +69,11 @@ var global_mods = {
                 OUTPUT("Loading widepolycar");
                 break;
         }
-        if (this.updateWorld != undefined) {OUTPUT("updateWorld()"); this.updateWorld()};
+        OUTPUT(update);
+        if ((this.updateWorld != undefined) && update) {
+            OUTPUT("updateWorld()");
+            this.updateWorld();
+        };
     },
     currentTemplate: 0,
 
@@ -99,6 +103,7 @@ output_text.id = "output_text";
 document.body.appendChild(output_text);
 
 const OUTPUT = (text) => {
+    return;
     output_text.innerHTML += "<br>" + text.toString()
 };
 
@@ -106,13 +111,13 @@ document.addEventListener("keydown", (event) => {if (event.key == "i") {output_t
 
 document.addEventListener("keydown", (event) => {if (event.key == "u") {
     const modelArr = ["default", "polycycle", "widepolycar"];
+    global_mods.currentTemplate = (global_mods.currentTemplate + 1) % modelArr.length;
     const loadName = modelArr[global_mods.currentTemplate];
     OUTPUT(loadName);
     global_mods.loadMod(loadName);
-    global_mods.currentTemplate = (global_mods.currentTemplate + 1) % modelArr.length;
 }});
 
-global_mods.loadMod("polycycle");
+global_mods.loadMod("default");
 
 (() => {
     var e = {
@@ -18104,6 +18109,7 @@ global_mods.loadMod("polycycle");
                 }))
 
                 global_mods.updateWorld = () => {
+                    OUTPUT(global_mods.CAR_MODEL_PATH);
                     (new oc).load(global_mods.CAR_MODEL_PATH, (t => {
                         loadCarModelOld(t);
                         //e.loadedResource();
@@ -27153,7 +27159,7 @@ global_mods.loadMod("polycycle");
             const t = new bC,
                 i = new ak,
                 n = new nc(e);
-            n.load("music", ["audio/mymusic.mp3", "audio/music.flac"]);
+            n.load("music", ["audio/music.mp3", "audio/music.flac"]);
             n.load("click", ["audio/click.flac"]);
             n.load("engine", ["audio/engine.flac"]);
             n.load("suspension", ["audio/suspension.flac"]);

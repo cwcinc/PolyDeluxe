@@ -56,17 +56,25 @@ var global_mods = {
                 this.CAR_MODEL_PATH = "models/0.1xpolycar.glb";
                 this.ROLL_INFLUENCE = 0;
                 this.ENGINE_SPEED_MULT = 3;
-                this.SUSPENSION_STIFFNESS_MULT = 10;
+                this.SUSPENSION_STIFFNESS_MULT = 1;
                 OUTPUT("Loading polycycle");
                 break;
-            case "widepolycar":
+            case "3widepolycar":
                 this.loadMod("default", false);
                 this.CAR_WIDTH_MULT = 3;
                 this.CAR_MODEL_PATH = "models/3xpolycar.glb";
-                this.ROLL_INFLUENCE = 2;
-                this.ENGINE_SPEED_MULT = 1;
-                this.SUSPENSION_STIFFNESS_MULT = 1;
-                OUTPUT("Loading widepolycar");
+                this.ROLL_INFLUENCE = 3;
+                OUTPUT("Loading 3widepolycar");
+                break;
+            case "tinypolycar":
+                this.loadMod("default", false);
+                this.CAR_WIDTH_MULT = 0.1;
+                this.CAR_LENGTH_MULT = 0.1;
+                this.CAR_HEIGHT_MULT = 0.1;
+                this.WHEEL_RADIUS_MULT = 0.1;
+                this.CAR_MODEL_PATH = "models/0.1xyzpolycar.glb";
+                this.ROLL_INFLUENCE = 3;
+                OUTPUT("Loading tinypolycar");
                 break;
         }
         OUTPUT(update);
@@ -110,7 +118,7 @@ const OUTPUT = (text) => {
 document.addEventListener("keydown", (event) => {if (event.key == "i") {output_text.innerHTML = ""}});
 
 document.addEventListener("keydown", (event) => {if (event.key == "u") {
-    const modelArr = ["default", "polycycle", "widepolycar"];
+    const modelArr = ["default", "polycycle", "3widepolycar", "tinypolycar"];
     global_mods.currentTemplate = (global_mods.currentTemplate + 1) % modelArr.length;
     const loadName = modelArr[global_mods.currentTemplate];
     OUTPUT(loadName);

@@ -1,41 +1,83 @@
-const ENGINE_SPEED_MULT = 3;
-const SUSPENSION_STIFFNESS_MULT = 10;
-const RELAXATION_DAMPING = 1;
-const COMPRESSION_DAMPING = 1;
-const FRICTION_SLIP = 1;
-const ROLL_INFLUENCE = 0;
+var global_mods = {
+    ENGINE_SPEED_MULT: 3,
+    SUSPENSION_STIFFNESS_MULT: 10,
+    RELAXATION_DAMPING: 1,
+    COMPRESSION_DAMPING: 1,
+    MAX_SUSPENSION_TRAVEL_MULT: 1,
+    MAX_SUSPENSION_FORCE_MULT: 1,
+    FRICTION_SLIP: 1,
+    ROLL_INFLUENCE: 0,
 
-const EDITOR_CAMERA_SPEED = 1;
-const EDITOR_CAMERA_VERTICAL_ANGLE = Math.PI / 2 - .05; // 0 is top-down -- default: Math.PI / 2 - .05;
-const BLOCK_PLACING_RESOLUTION = 10;
+    EDITOR_CAMERA_SPEED: 1,
+    EDITOR_CAMERA_VERTICAL_ANGLE: Math.PI / 2 - .05,
+    BLOCK_PLACING_RESOLUTION: 32,
 
-const STEERING_MULT = 1;
-const WHEEL_RADIUS_MULT = 1;
+    STEERING_MULT: 1,
+    
+    WHEEL_RADIUS_MULT: 1,
+    CAR_WIDTH_MULT: 1,
+    CAR_LENGTH_MULT: 1,
+    CAR_HEIGHT_MULT: 1,
+    CAR_MODEL_PATH: "models/car.glb",
 
-const CAR_MODEL_PATH = "models/0.1xpolycar.glb";
+    GRAVITY_MULT: 1,
 
-const CAR_SIZE_MULT = 1;
-// [+right, +up, +front]
-const WHEEL_COORDINATES = { // dont mess with this unless you change the model
-    "WheelFL": [.627909*CAR_SIZE_MULT*0.1, .27*CAR_SIZE_MULT, 1.3478*CAR_SIZE_MULT],
-    "WheelFR": [-.627909*CAR_SIZE_MULT*0.1, .27*CAR_SIZE_MULT, 1.3478*CAR_SIZE_MULT],
-    "WheelBL": [.720832*CAR_SIZE_MULT*0.1, .27*CAR_SIZE_MULT, -1.52686*CAR_SIZE_MULT],
-    "WheelBR": [-.720832*CAR_SIZE_MULT*0.1, .27*CAR_SIZE_MULT, -1.52686*CAR_SIZE_MULT]
+    get WHEEL_COORDINATES() {
+        return {
+            "WheelFL": [.627909*this.CAR_WIDTH_MULT, .27*this.CAR_HEIGHT_MULT, 1.3478*this.CAR_LENGTH_MULT],
+            "WheelFR": [-.627909*this.CAR_WIDTH_MULT, .27*this.CAR_HEIGHT_MULT, 1.3478*this.CAR_LENGTH_MULT],
+            "WheelBL": [.720832*this.CAR_WIDTH_MULT, .27*this.CAR_HEIGHT_MULT, -1.52686*this.CAR_LENGTH_MULT],
+            "WheelBR": [-.720832*this.CAR_WIDTH_MULT, .27*this.CAR_HEIGHT_MULT, -1.52686*this.CAR_LENGTH_MULT]
+        }
+    },
+    
+    loadMod(template, custom={}) { // doesnt impact editor
+        switch (template) {
+            case "default":
+                this.CAR_MODEL_PATH = "models/car.glb";
+                this.ENGINE_SPEED_MULT = 1,
+                this.SUSPENSION_STIFFNESS_MULT = 1,
+                this.RELAXATION_DAMPING = 1,
+                this.COMPRESSION_DAMPING = 1,
+                this.MAX_SUSPENSION_TRAVEL_MULT = 1,
+                this.MAX_SUSPENSION_FORCE_MULT = 1,
+                this.FRICTION_SLIP = 1,
+                this.ROLL_INFLUENCE = 1,
+                this.STEERING_MULT = 1,
+                this.WHEEL_RADIUS_MULT = 1,
+                this.CAR_WIDTH_MULT = 1,
+                this.CAR_LENGTH_MULT = 1,
+                this.CAR_HEIGHT_MULT = 1;
+                OUTPUT("Loading default");
+                break;
+            case "polycycle":
+                this.loadMod("default");
+                this.CAR_WIDTH_MULT = 0.1;
+                this.CAR_MODEL_PATH = "models/0.1xpolycar.glb";
+                this.ROLL_INFLUENCE = 0;
+                this.ENGINE_SPEED_MULT = 3;
+                this.SUSPENSION_STIFFNESS_MULT = 10;
+                OUTPUT("Loading polycycle");
+                break;
+            case "widepolycar":
+                this.loadMod("default");
+                this.CAR_WIDTH_MULT = 3;
+                this.CAR_MODEL_PATH = "models/3xpolycar.glb";
+                this.ROLL_INFLUENCE = 2;
+                this.ENGINE_SPEED_MULT = 1;
+                this.SUSPENSION_STIFFNESS_MULT = 1;
+                OUTPUT("Loading widepolycar");
+                break;
+        }
+        if (this.updateWorld != undefined) {OUTPUT("updateWorld()"); this.updateWorld()};
+    },
+    currentTemplate: 0,
+
+    updateWorld: undefined
 }
 
-/* 
-const WHEEL_COORDINATES = {
-    "WheelFL": [.627909, .27, 1.3478],
-    "WheelFR": [-.627909, .27, 1.3478],
-    "WheelBL": [.720832, .27, -1.52686],
-    "WheelBR": [-.720832, .27, -1.52686]
-}
-*/
-
-window.GRAVITY_MULT = 1; // does nothing
 window.GRAVITY_CHANGE = 0;
 window.gravity_controls_init = false; // dont change ever
-
 const gravity_meter = document.createElement("p");
 gravity_meter.innerHTML = "-9.82 m/s"
 gravity_meter.style.color = "white";
@@ -56,9 +98,21 @@ output_text.style.zIndex = 10000;
 output_text.id = "output_text";
 document.body.appendChild(output_text);
 
-const OUTPUT = (text) => {output_text.innerHTML += "<br>" + text.toString()};
+const OUTPUT = (text) => {
+    output_text.innerHTML += "<br>" + text.toString()
+};
 
 document.addEventListener("keydown", (event) => {if (event.key == "i") {output_text.innerHTML = ""}});
+
+document.addEventListener("keydown", (event) => {if (event.key == "u") {
+    const modelArr = ["default", "polycycle", "widepolycar"];
+    const loadName = modelArr[global_mods.currentTemplate];
+    OUTPUT(loadName);
+    global_mods.loadMod(loadName);
+    global_mods.currentTemplate = (global_mods.currentTemplate + 1) % modelArr.length;
+}});
+
+global_mods.loadMod("polycycle");
 
 (() => {
     var e = {
@@ -17346,7 +17400,8 @@ document.addEventListener("keydown", (event) => {if (event.key == "i") {output_t
                     down: s,
                     left: a
                 }), $p(this, zp, "f").increment()), n && !$p(this, Op, "f") && $p(this, Fp, "f")) {
-                const e = (4e3 * ENGINE_SPEED_MULT);
+                //OUTPUT(global_mods.ENGINE_SPEED_MULT);
+                const e = (4e3 * global_mods.ENGINE_SPEED_MULT);
                 $p(this, Pp, "f").applyEngineForce(e, 2), $p(this, Pp, "f").applyEngineForce(e, 3)
             } else $p(this, Pp, "f").applyEngineForce(0, 2), $p(this, Pp, "f").applyEngineForce(0, 3);
             if (s && !$p(this, Op, "f") && $p(this, Fp, "f"))
@@ -17368,7 +17423,7 @@ document.addEventListener("keydown", (event) => {if (event.key == "i") {output_t
             $p(this, Fp, "f") && (a && !$p(this, Op, "f") ? Qp(this, Up, Math.min($p(this, Up, "f") + 10 * e, 1), "f") : r && !$p(this, Op, "f") ? Qp(this, Up, Math.max($p(this, Up, "f") - 10 * e, -1), "f") : $p(this, Up, "f") > 0 ? Qp(this, Up, Math.max($p(this, Up, "f") - 10 * e, 0), "f") : $p(this, Up, "f") < 0 && Qp(this, Up, Math.min($p(this, Up, "f") + 10 * e, 0), "f"));
             const f = $p(this, Up, "f") * u;
             let p;
-            p = d < 0 && f < 0 ? Math.min(d, f) : d > 0 && f > 0 ? Math.max(d, f) : d + f, $p(this, Pp, "f").setSteeringValue(p * STEERING_MULT, 0), $p(this, Pp, "f").setSteeringValue(p * STEERING_MULT, 1)
+            p = d < 0 && f < 0 ? Math.min(d, f) : d > 0 && f > 0 ? Math.max(d, f) : d + f, $p(this, Pp, "f").setSteeringValue(p * global_mods.STEERING_MULT, 0), $p(this, Pp, "f").setSteeringValue(p * global_mods.STEERING_MULT, 1) // IDEA - rear wheel drive?
         };
         const em = class {
             constructor(e, t, i, n, r, s, a, o) {
@@ -17429,18 +17484,18 @@ document.addEventListener("keydown", (event) => {if (event.key == "i") {output_t
                     v = new Ammo.btVector3(-1, 0, 0);
                 ["WheelFL", "WheelFR", "WheelBL", "WheelBR"].forEach((e => {
                     let t;
-                    t = new Ammo.btVector3(...WHEEL_COORDINATES[e]);
+                    t = new Ammo.btVector3(...global_mods.WHEEL_COORDINATES[e]);
                     const i = "WheelFL" == e || "WheelFR" == e; // does nothing??
-                    const n = m.addWheel(t, g, v, .12, .331*WHEEL_RADIUS_MULT, f, i);
+                    const n = m.addWheel(t, g, v, .12, .331*global_mods.WHEEL_RADIUS_MULT, f, i);
                     Ammo.destroy(t);
-                    n.set_m_maxSuspensionTravelCm(1e3*CAR_SIZE_MULT);
-                    n.set_m_maxSuspensionForce(1e6);
-                    n.set_m_suspensionStiffness(50 * window.GRAVITY_MULT);
+                    n.set_m_maxSuspensionTravelCm(1e3*global_mods.MAX_SUSPENSION_TRAVEL_MULT);
+                    n.set_m_maxSuspensionForce(1e6*global_mods.MAX_SUSPENSION_FORCE_MULT);
+                    n.set_m_suspensionStiffness(50*global_mods.SUSPENSION_STIFFNESS_MULT);
                     //window.addEventListener("keydown", (event) => {if (event.key == "o") {n.set_m_suspensionStiffness(0.5)}});
-                    n.set_m_wheelsDampingRelaxation(5 * RELAXATION_DAMPING);
-                    n.set_m_wheelsDampingCompression(200 * COMPRESSION_DAMPING);
-                    n.set_m_frictionSlip(3 * FRICTION_SLIP);
-                    n.set_m_rollInfluence(0.75 * ROLL_INFLUENCE);
+                    n.set_m_wheelsDampingRelaxation(5 * global_mods.RELAXATION_DAMPING);
+                    n.set_m_wheelsDampingCompression(200 * global_mods.COMPRESSION_DAMPING);
+                    n.set_m_frictionSlip(3 * global_mods.FRICTION_SLIP);
+                    n.set_m_rollInfluence(0.75 * global_mods.ROLL_INFLUENCE);
                 })), Ammo.destroy(g), Ammo.destroy(v);
                 const w = new Ammo.btTransform;
                 w.setIdentity();
@@ -17996,7 +18051,8 @@ document.addEventListener("keydown", (event) => {if (event.key == "i") {output_t
             }
             static initResources(e) {
                 e.addResource();
-                (new oc).load(CAR_MODEL_PATH, (t => {
+                OUTPUT("initResources");
+                function loadCarModelOld(t) {
                     function i(e) {
                         const i = t.scene.getObjectByName(e);
                         if (null == i) throw 'Mesh "' + e + '" does not exist';
@@ -18006,6 +18062,7 @@ document.addEventListener("keydown", (event) => {if (event.key == "i") {output_t
                         }
                         const n = i.children.map((e => e.geometry)),
                             r = rc(n, !0);
+
                         i.updateMatrixWorld(!0), r.applyMatrix4(i.matrix.clone());
                         const s = i.children.map((e => e.material)),
                             a = new Gi(r, s);
@@ -18029,6 +18086,7 @@ document.addEventListener("keydown", (event) => {if (event.key == "i") {output_t
                         wheelBR: n(i("WheelBR")),
                         collisionShapeVertices: Ug(Dg, Hm, "m", Ig).call(Dg, i("Collision"))
                     };
+                    let WHEEL_COORDINATES = global_mods.WHEEL_COORDINATES;
                     Dg.models.wheelFL.geometry.translate(-WHEEL_COORDINATES.WheelFL[0], .218824 * WHEEL_COORDINATES.WheelFL[1] / 0.27, -WHEEL_COORDINATES.WheelFL[2]);
                     Dg.models.wheelFR.geometry.translate(-WHEEL_COORDINATES.WheelFR[0], .218824 * WHEEL_COORDINATES.WheelFR[1] / 0.27, -WHEEL_COORDINATES.WheelFR[2]);
                     Dg.models.wheelBL.geometry.translate(-WHEEL_COORDINATES.WheelBL[0], .218824 * WHEEL_COORDINATES.WheelBL[1] / 0.27, -WHEEL_COORDINATES.WheelBL[2]);
@@ -18037,8 +18095,20 @@ document.addEventListener("keydown", (event) => {if (event.key == "i") {output_t
                     Dg.models.wheelFR.geometry.rotateZ(Math.PI);
                     Dg.models.wheelBL.geometry.rotateZ(Math.PI);
                     Dg.models.wheelBR.geometry.rotateZ(Math.PI);
+                }
+
+
+                (new oc).load(global_mods.CAR_MODEL_PATH, (t => {
+                    loadCarModelOld(t);
                     e.loadedResource();
                 }))
+
+                global_mods.updateWorld = () => {
+                    (new oc).load(global_mods.CAR_MODEL_PATH, (t => {
+                        loadCarModelOld(t);
+                        //e.loadedResource();
+                    }))
+                };
             }
         }
         Hm = Dg, Vm = new WeakMap, Gm = new WeakMap, jm = new WeakMap, Xm = new WeakMap, qm = new WeakMap, Ym = new WeakMap, Km = new WeakMap, Zm = new WeakMap, Jm = new WeakMap, Qm = new WeakMap, $m = new WeakMap, eg = new WeakMap, tg = new WeakMap, ig = new WeakMap, ng = new WeakMap, rg = new WeakMap, sg = new WeakMap, ag = new WeakMap, og = new WeakMap, lg = new WeakMap, cg = new WeakMap, hg = new WeakMap, dg = new WeakMap, ug = new WeakMap, fg = new WeakMap, pg = new WeakMap, mg = new WeakMap, gg = new WeakMap, vg = new WeakMap, wg = new WeakMap, yg = new WeakMap, Wm = new WeakSet, _g = function() {
@@ -18229,7 +18299,7 @@ document.addEventListener("keydown", (event) => {if (event.key == "i") {output_t
             const t = e.geometry.toNonIndexed();
             if (!(t.attributes.position instanceof mi)) throw "Vertices must use BufferAttribute";
             return Array.from(t.attributes.position.array)
-        }, Dg.massOffset = .6*CAR_SIZE_MULT, Dg.models = null;
+        }, Dg.massOffset = .6*global_mods.CAR_HEIGHT_MULT, Dg.models = null;
         const Og = Dg;
         /*!
          * iro.js v5.5.2
@@ -20449,6 +20519,7 @@ document.addEventListener("keydown", (event) => {if (event.key == "i") {output_t
                     const t = i[s + 0] | i[s + 1] << 8 | i[s + 2] << 16 | i[s + 3] << 24;
                     s += 4;
                     for (let a = 0; a < t; ++a) {
+                        let BLOCK_PLACING_RESOLUTION = global_mods.BLOCK_PLACING_RESOLUTION;
                         if (i.length - s < 3) return null;
                         const t = ((i[s + 0] | i[s + 1] << 8 | i[s + 2] << 16) - Math.pow(2, 23)) / BLOCK_PLACING_RESOLUTION;
                         if (s += 3, i.length - s < 3) return null;
@@ -20505,6 +20576,7 @@ document.addEventListener("keydown", (event) => {if (event.key == "i") {output_t
                     const t = r[o + 0] | r[o + 1] << 8 | r[o + 2] << 16 | r[o + 3] << 24;
                     o += 4;
                     for (let i = 0; i < t; ++i) {
+                        let BLOCK_PLACING_RESOLUTION = global_mods.BLOCK_PLACING_RESOLUTION;
                         if (r.length - o < 3) return null;
                         const t = ((r[o + 0] | r[o + 1] << 8 | r[o + 2] << 16) - Math.pow(2, 23)) / BLOCK_PLACING_RESOLUTION;
                         if (o += 3, r.length - o < 3) return null;
@@ -20561,6 +20633,7 @@ document.addEventListener("keydown", (event) => {if (event.key == "i") {output_t
                 if (n < 0 || n > 65535) throw "Type id is out of range";
                 const r = e.length;
                 i.push(255 & n, n >>> 8 & 255, 255 & r, r >>> 8 & 255, r >>> 16 & 255, r >>> 24 & 255), e.forEach((e => {
+                    let BLOCK_PLACING_RESOLUTION = global_mods.BLOCK_PLACING_RESOLUTION;
                     const r = BLOCK_PLACING_RESOLUTION*e.x + Math.pow(2, 23),
                         s = BLOCK_PLACING_RESOLUTION*e.y,
                         a = BLOCK_PLACING_RESOLUTION*e.z + Math.pow(2, 23);
@@ -21790,8 +21863,10 @@ document.addEventListener("keydown", (event) => {if (event.key == "i") {output_t
             const i = (new dt).copy(t.geometry.boundingSphere);
             return Fb(this, Tb, "f").zoom = 1 / i.radius * .9, Fb(this, Tb, "f").position.copy(i.center), Fb(this, Tb, "f").position.addScalar(1e3), Fb(this, Tb, "f").updateProjectionMatrix(), Fb(this, Sb, "f").clear(), Fb(this, Ab, "f").add(e), Fb(this, Sb, "f").render(Fb(this, Ab, "f"), Fb(this, Tb, "f")), Fb(this, Ab, "f").remove(e), Fb(this, Sb, "f").domElement.toDataURL()
         }, kb = function() {
+            let BLOCK_PLACING_RESOLUTION = global_mods.BLOCK_PLACING_RESOLUTION;
             return Math.floor(Fb(this, ob, "f").position.y / (5 / BLOCK_PLACING_RESOLUTION))
         }, Rb = function(e) {           // IMPORTANT -- editor camera height stuff
+            let BLOCK_PLACING_RESOLUTION = global_mods.BLOCK_PLACING_RESOLUTION;
             const t = Fb(this, wx, "a", kb);
             Fb(this, ob, "f").position.y = 5 * e / BLOCK_PLACING_RESOLUTION;
             Fb(this, Zx, "f").position.y += 5 * (e - t) / BLOCK_PLACING_RESOLUTION;
@@ -21815,6 +21890,7 @@ document.addEventListener("keydown", (event) => {if (event.key == "i") {output_t
             let e;
             if (null != Fb(this, ub, "f") ? (Fb(this, ab, "f").setFromCamera(Fb(this, ub, "f"), Fb(this, bx, "f").camera), e = Fb(this, ab, "f").intersectObjects([Fb(this, ob, "f")])) : e = [], e.length > 0) {
                 const t = e[0];
+                let BLOCK_PLACING_RESOLUTION = global_mods.BLOCK_PLACING_RESOLUTION;
                 const i = new Ge(
                     Math.round(BLOCK_PLACING_RESOLUTION * t.point.x / Qy.partWidth) / BLOCK_PLACING_RESOLUTION, 
                     Math.floor(BLOCK_PLACING_RESOLUTION * Fb(this, ob, "f").position.y / Qy.partHeight) / BLOCK_PLACING_RESOLUTION, 
@@ -21851,7 +21927,7 @@ document.addEventListener("keydown", (event) => {if (event.key == "i") {output_t
                 const i = new Ge;
                 if (Fb(this, $x, "f") && (i.z = -1), Fb(this, eb, "f") && (i.x = 1), Fb(this, tb, "f") && (i.z = 1), Fb(this, ib, "f") && (i.x = -1), 0 != i.x || 0 != i.z) {
                     const n = i.applyQuaternion(Fb(this, Zx, "f").quaternion),
-                        r = new ve(n.x, n.z).normalize().multiplyScalar(EDITOR_CAMERA_SPEED),
+                        r = new ve(n.x, n.z).normalize().multiplyScalar(global_mods.EDITOR_CAMERA_SPEED),
                         s = new Ge(r.x, 0, r.y).multiplyScalar(t * e);
                     Fb(this, Zx, "f").position.add(s), Fb(this, Jx, "f").target.add(s)
                 }
@@ -21946,7 +22022,7 @@ document.addEventListener("keydown", (event) => {if (event.key == "i") {output_t
                 };
                 Fb(this, Jx, "f").minDistance = 4;
                 Fb(this, Jx, "f").maxDistance = 600;
-                Fb(this, Jx, "f").maxPolarAngle = EDITOR_CAMERA_VERTICAL_ANGLE;
+                Fb(this, Jx, "f").maxPolarAngle = global_mods.EDITOR_CAMERA_VERTICAL_ANGLE;
                 Ob(this, ab, new zl, "f");
                 Ob(this, cb, new zo({          // Editor block ghost     --     IMPORTANT
                     transparent: !0,           // enable transparency
@@ -22925,6 +23001,8 @@ document.addEventListener("keydown", (event) => {if (event.key == "i") {output_t
                     const e = Og.models.suspension.clone();
                     e.morphTargetInfluences = [], t.add(e);
                     const a = Og.models.wheelFL.clone();
+
+                    let WHEEL_COORDINATES = global_mods.WHEEL_COORDINATES;
 
                     a.position.set(-WHEEL_COORDINATES.WheelFL[0], -WHEEL_COORDINATES.WheelFL[1], WHEEL_COORDINATES.WheelFL[2]), t.add(a);
                     const o = Og.models.wheelFR.clone();
@@ -27075,7 +27153,20 @@ document.addEventListener("keydown", (event) => {if (event.key == "i") {output_t
             const t = new bC,
                 i = new ak,
                 n = new nc(e);
-            n.load("music", ["audio/music.mp3", "audio/music.flac"]), n.load("click", ["audio/click.flac"]), n.load("engine", ["audio/engine.flac"]), n.load("suspension", ["audio/suspension.flac"]), n.load("tires", ["audio/tires.flac"]), n.load("collision", ["audio/collision.flac"]), n.load("skidding", ["audio/skidding.flac"]), n.load("editor_edit", ["audio/editor_edit.flac"]), n.load("checkpoint", ["audio/checkpoint.flac"]), n.load("finish", ["audio/checkpoint.flac"]), _m.initResources(e), Og.initResources(e), o_.initResources(e), e.addResource();
+            n.load("music", ["audio/mymusic.mp3", "audio/music.flac"]);
+            n.load("click", ["audio/click.flac"]);
+            n.load("engine", ["audio/engine.flac"]);
+            n.load("suspension", ["audio/suspension.flac"]);
+            n.load("tires", ["audio/tires.flac"]);
+            n.load("collision", ["audio/collision.flac"]);
+            n.load("skidding", ["audio/skidding.flac"]);
+            n.load("editor_edit", ["audio/editor_edit.flac"]);
+            n.load("checkpoint", ["audio/checkpoint.flac"]);
+            n.load("finish", ["audio/checkpoint.flac"]);
+            _m.initResources(e);
+            Og.initResources(e); // IMPORTANT - add car model
+            o_.initResources(e);
+            e.addResource();
             new Xk(null, null).testDeterminism().then((t => {
                 c.submitAllowed = t, e.loadedResource()
             }));

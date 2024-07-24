@@ -1,3 +1,5 @@
+const debug = true;
+
 var global_mods = {
     ENGINE_SPEED_MULT: 3,
     SUSPENSION_STIFFNESS_MULT: 10,
@@ -20,7 +22,7 @@ var global_mods = {
     CAR_HEIGHT_MULT: 1,
     CAR_MODEL_PATH: "models/car.glb",
 
-    GRAVITY_MULT: 1,
+    GRAVITY_CHANGE: 0,
 
     get WHEEL_COORDINATES() {
         return {
@@ -31,10 +33,13 @@ var global_mods = {
         }
     },
 
+    templates: ["default", "polycycle", "3widepolycar", "lowgravity"],
+
     loadMod(template, update=true, custom={}) { // doesnt impact editor
         switch (template) {
             case "default":
-                this.CAR_MODEL_PATH = "models/car.glb";
+                this.GRAVITY_CHANGE = 0,
+                this.CAR_MODEL_PATH = "models/car.glb",
                 this.ENGINE_SPEED_MULT = 1,
                 this.SUSPENSION_STIFFNESS_MULT = 1,
                 this.RELAXATION_DAMPING = 1,
@@ -76,20 +81,22 @@ var global_mods = {
                 this.ROLL_INFLUENCE = 3;
                 OUTPUT("Loading tinypolycar");
                 break;
+            case "lowgravity":
+                this.loadMod("default", false);
+                this.GRAVITY_CHANGE = 9;
         }
-        OUTPUT(update);
-        if ((this.updateWorld != undefined) && update) {
-            OUTPUT("updateWorld()");
-            this.updateWorld();
+        if (update) {
+            if (this.updateWorld != undefined) this.updateWorld();
+            if (this.updateGravity != undefined) this.updateGravity();
         };
     },
     currentTemplate: 0,
 
-    updateWorld: undefined
+    updateWorld: undefined,
+
+    updateGravity: undefined
 }
 
-window.GRAVITY_CHANGE = 0;
-window.gravity_controls_init = false; // dont change ever
 const gravity_meter = document.createElement("p");
 gravity_meter.innerHTML = "-9.82 m/s"
 gravity_meter.style.color = "white";
@@ -111,19 +118,28 @@ output_text.id = "output_text";
 document.body.appendChild(output_text);
 
 const OUTPUT = (text) => {
-    return;
-    output_text.innerHTML += "<br>" + text.toString()
+    if (!debug) {return;}
+    output_text.innerHTML = "<br>" + text.toString();
 };
 
 document.addEventListener("keydown", (event) => {if (event.key == "i") {output_text.innerHTML = ""}});
 
 document.addEventListener("keydown", (event) => {if (event.key == "u") {
-    const modelArr = ["default", "polycycle", "3widepolycar", "tinypolycar"];
-    global_mods.currentTemplate = (global_mods.currentTemplate + 1) % modelArr.length;
-    const loadName = modelArr[global_mods.currentTemplate];
-    OUTPUT(loadName);
+    global_mods.currentTemplate = (global_mods.currentTemplate + 1) % global_mods.templates.length;
+    const loadName = global_mods.templates[global_mods.currentTemplate];
+    //OUTPUT(loadName);
     global_mods.loadMod(loadName);
 }});
+
+document.addEventListener("keydown", (event) => {
+    if (event.key == "o") {
+        global_mods.GRAVITY_CHANGE += 1;
+        global_mods.updateGravity();
+    } else if (event.key == "p") {
+        global_mods.GRAVITY_CHANGE -= 1;
+        global_mods.updateGravity();
+    }
+});
 
 global_mods.loadMod("default");
 
@@ -16969,27 +16985,16 @@ global_mods.loadMod("default");
         class dp {
             constructor() {
                 Wf.add(this), Vf.set(this, void 0), Gf.set(this, void 0), jf.set(this, void 0), Xf.set(this, void 0), qf.set(this, void 0), Yf.set(this, void 0), Kf.set(this, []), Zf.set(this, []), Jf.set(this, new Map), $f.set(this, []), ep.set(this, null), tp.set(this, null), ip.set(this, 0), np.set(this, 0), rp.set(this, 1e3), sp.set(this, []), ap.set(this, []), cp(this, Vf, new Ammo.btDefaultCollisionConfiguration, "f"), cp(this, Gf, new Ammo.btCollisionDispatcher(hp(this, Vf, "f")), "f"), cp(this, jf, new Ammo.btDbvtBroadphase, "f"), cp(this, Xf, new Ammo.btSequentialImpulseConstraintSolver, "f"), cp(this, qf, new Ammo.btDiscreteDynamicsWorld(hp(this, Gf, "f"), hp(this, jf, "f"), hp(this, Xf, "f"), hp(this, Vf, "f")), "f"), cp(this, Yf, new Ammo.btGhostPairCallback, "f"), hp(this, qf, "f").getPairCache().setInternalGhostPairCallback(hp(this, Yf, "f"));
-                const e = new Ammo.btVector3(0, (window.GRAVITY_CHANGE == 0) ? -9.82 : -10 + window.GRAVITY_CHANGE, 0);
-                
-                if (!window.gravity_controls_init) {
-                    window.addEventListener("keydown", (event) => {
-                        if (event.key == "p") {
-                            window.GRAVITY_CHANGE += 1;
-                            const gravity_vector = new Ammo.btVector3(0, -10 + window.GRAVITY_CHANGE, 0);
-                            document.getElementById("gravity_meter").innerHTML = (-10 + window.GRAVITY_CHANGE).toString() + " m/s";
-                            hp(this, qf, "f").setGravity(gravity_vector);
-                            Ammo.destroy(gravity_vector);
-                        } else if (event.key == "o") {
-                            window.GRAVITY_CHANGE -= 1;
-                            const gravity_vector = new Ammo.btVector3(0, -10 + window.GRAVITY_CHANGE, 0);
-                            document.getElementById("gravity_meter").innerHTML = (-10 + window.GRAVITY_CHANGE).toString() + " m/s";
-                            hp(this, qf, "f").setGravity(gravity_vector);
-                            Ammo.destroy(gravity_vector);
-                        }
-                    });
-                    window.gravity_controls_init = true;
+                const e = new Ammo.btVector3(0, -9.82 + global_mods.GRAVITY_CHANGE, 0);
+                hp(this, qf, "f").setGravity(e);
+                Ammo.destroy(e);
+
+                global_mods.updateGravity = () => {
+                    const e = new Ammo.btVector3(0, -9.82 + global_mods.GRAVITY_CHANGE, 0);
+                    hp(this, qf, "f").setGravity(e);
+                    Ammo.destroy(e);
+                    gravity_meter.innerHTML = -9.82 + global_mods.GRAVITY_CHANGE;
                 }
-                hp(this, qf, "f").setGravity(e), Ammo.destroy(e)
             }
             dispose() {
                 hp(this, Kf, "f").forEach((e => {
@@ -18064,7 +18069,6 @@ global_mods.loadMod("default");
             }
             static initResources(e) {
                 e.addResource();
-                OUTPUT("initResources");
                 function loadCarModelOld(t) {
                     function i(e) {
                         const i = t.scene.getObjectByName(e);
@@ -18117,7 +18121,7 @@ global_mods.loadMod("default");
                 }))
 
                 global_mods.updateWorld = () => {
-                    OUTPUT(global_mods.CAR_MODEL_PATH);
+                    //OUTPUT(global_mods.CAR_MODEL_PATH);
                     (new oc).load(global_mods.CAR_MODEL_PATH, (t => {
                         loadCarModelOld(t);
                         //e.loadedResource();
@@ -20608,27 +20612,67 @@ global_mods.loadMod("default");
             }
             e.withoutMetadata = t;
             e.withMetadata = function(e, i) {
-                if (!e.startsWith("v2")) return null;
-                const n = e.substring(2, 4);
-                let r = xy.decode(n);
-                if (null == r) return null;
-                if (1 != r.length) return null;
-                const s = r[0],
-                    a = Math.ceil(s / 3 * 4),
-                    o = e.substring(4, 4 + a),
-                    l = xy.decode(o);
-                if (null == l) return null;
-                let c;
-                try {
-                    c = new TextDecoder("utf-8").decode(l)
-                } catch (e) {
-                    return null
+                if (e.startsWith("v2")) {
+                    const n = e.substring(2, 4);
+                    let r = xy.decode(n);
+                    if (null == r) return null;
+                    if (1 != r.length) return null;
+                    const s = r[0],
+                        a = Math.ceil(s / 3 * 4),
+                        o = e.substring(4, 4 + a),
+                        l = xy.decode(o);
+                    if (null == l) return null;
+                    let c;
+                    try {
+                        c = new TextDecoder("utf-8").decode(l)
+                    } catch (e) {
+                        return null
+                    }
+                    const h = t(e.substring(4 + a), i);
+                    return null == h ? null : {
+                        trackName: c,
+                        trackData: h
+                    }
+                } else if (e.startsWith("m1")) {        // IMPORTANT -- MODDED TRACK CODE DECODING
+                    let withoutModdedTerms = "";
+                    e.split("~").forEach((element) => {
+                        let Split = element.split("=");
+                        if (Split.length == 2) {
+                            switch (Split[0]) {
+                                case "T":
+                                    global_mods.loadMod(global_mods.templates[parseInt(Split[1])]);
+                                    break;
+                                case "R":
+                                    global_mods.BLOCK_PLACING_RESOLUTION = parseInt(Split[1]);
+                            }
+                        } else {
+                            withoutModdedTerms += Split[0];
+                        }
+                    });
+                    
+                    const n = withoutModdedTerms.substring(2, 4);
+                    let r = xy.decode(n);
+                    if (null == r) return null;
+                    if (1 != r.length) return null;
+                    const s = r[0],
+                        a = Math.ceil(s / 3 * 4),
+                        o = withoutModdedTerms.substring(4, 4 + a),
+                        l = xy.decode(o);
+                    if (null == l) return null;
+                    let c;
+                    try {
+                        c = new TextDecoder("utf-8").decode(l)
+                    } catch (e) {
+                        return null
+                    }
+                    const h = t(withoutModdedTerms.substring(4 + a), i);
+                    return null == h ? null : {
+                        trackName: c,
+                        trackData: h
+                    }
                 }
-                const h = t(e.substring(4 + a), i);
-                return null == h ? null : {
-                    trackName: c,
-                    trackData: h
-                }
+
+                return null;
             }
         }(Ty || (Ty = {}));
         const Ay = Ty;
@@ -20726,9 +20770,16 @@ global_mods.loadMod("default");
                 return i.push(t, !0), xy.encode(i.result)
             }
             toExportString(e, t) {      // IMPORTANT - generates final export string
-                const i = (new TextEncoder).encode(e),
-                    n = new Uint8Array(1);
-                return n[0] = i.length, "v2" + xy.encode(n) + xy.encode(i) + this.toSaveString(t)
+                const sep = "~";
+                var PREFIX = "m1";
+                if (global_mods.BLOCK_PLACING_RESOLUTION != 1) {PREFIX += sep + "R=" + global_mods.BLOCK_PLACING_RESOLUTION.toString()}
+                PREFIX += sep + "T=" + global_mods.currentTemplate;
+
+                PREFIX += sep;
+
+                const i = (new TextEncoder).encode(e);
+                const n = new Uint8Array(1);
+                return n[0] = i.length, PREFIX + xy.encode(n) + xy.encode(i) + this.toSaveString(t)
             }
             static fromSaveString(e, t) {
                 const i = Ay.withoutMetadata(e, t);
@@ -20739,8 +20790,8 @@ global_mods.loadMod("default");
                 return null != r ? r : null
             }
             static fromExportString(e, t) {
-                const i = e.replace(/\s+/g, ""),
-                    n = Ay.withMetadata(i, t);
+                const i = e.replace(/\s+/g, "");
+                const n = Ay.withMetadata(i, t);
                 if (null != n) return n;
                 const r = Sy.withMetadata(i, t);
                 if (null != r) return r;
@@ -20951,7 +21002,7 @@ global_mods.loadMod("default");
             }
             loadTrackData(e, t = !0) {
                 return this.clear(), Yy(this, Hy, t ? e.getId(Ky(this, Oy, "f")) : null, "f"), e.forEachPart(((e, t, i, n, r, s) => {
-                    this.setPart(e, t, i, n, r, s)
+                    this.setPart(e, t, i, n, r, s)  // IMPORTANT - command to create a track part
                 })), !0
             }
         }
@@ -21184,7 +21235,7 @@ global_mods.loadMod("default");
                             }))
                         },
                         t = I_(this, A_, "f").value,
-                        i = Iy.fromExportString(t, a);
+                        i = Iy.fromExportString(t, a); // IMPORTANT - Loads track and data
                     if (null == i) e();
                     else {
                         const {
@@ -21193,11 +21244,18 @@ global_mods.loadMod("default");
                         } = i;
                         if (o.checkTrackExists(t)) {
                             const i = I_(this, T_, "f").className;
-                            I_(this, T_, "f").className = "hidden", l.showConfirm(r.get('The track "{0}" already exists. Do you wish to overwrite it?', [t]), r.get("Cancel"), r.get("Overwrite"), (() => {
-                                I_(this, T_, "f").className = i
-                            }), (() => {
-                                I_(this, T_, "f").className = i, o.saveTrack(t, n, a) ? I_(this, R_, "f").call(this) : e()
-                            }))
+                            I_(this, T_, "f").className = "hidden";
+                            l.showConfirm(
+                                r.get('The track "{0}" already exists. Do you wish to overwrite it?', [t]), 
+                                r.get("Cancel"), 
+                                r.get("Overwrite"), 
+                                (() => {
+                                    I_(this, T_, "f").className = i
+                                }), 
+                                (() => {
+                                    I_(this, T_, "f").className = i, o.saveTrack(t, n, a) ? I_(this, R_, "f").call(this) : e()
+                                })
+                            )
                         } else o.saveTrack(t, n, a) ? I_(this, R_, "f").call(this) : e()
                     }
                 })), d.appendChild(I_(this, k_, "f")), L_(this, A_, document.createElement("textarea"), "f"), I_(this, A_, "f").spellcheck = !1, h.appendChild(I_(this, A_, "f")), I_(this, T_, "f").className = i ? "track-export menu-track-export" : "track-export", n && (I_(this, A_, "f").placeholder = I_(this, M_, "f").get("Paste track data here...")), I_(this, A_, "f").value = e, I_(this, A_, "f").readOnly = !n, n ? (I_(this, C_, "f").className = "hidden", I_(this, k_, "f").className = "button right") : (I_(this, C_, "f").className = "button right", I_(this, k_, "f").className = "hidden"), L_(this, R_, t, "f"), window.addEventListener("keydown", L_(this, P_, (e => {
@@ -22504,9 +22562,58 @@ global_mods.loadMod("default");
         const qM = class {
             constructor(e, t, i, n, r, s, a, o, l, c, h, d, u, f) {
                 var p;
-                gM.add(this), vM.set(this, void 0), wM.set(this, void 0), yM.set(this, void 0), _M.set(this, void 0), xM.set(this, void 0), bM.set(this, void 0), EM.set(this, void 0), MM.set(this, void 0), SM.set(this, void 0), TM.set(this, void 0), AM.set(this, void 0), CM.set(this, void 0), kM.set(this, void 0), RM.set(this, void 0), PM.set(this, void 0), LM.set(this, null), IM.set(this, !1), NM.set(this, null), UM.set(this, void 0), DM.set(this, void 0), OM.set(this, void 0), FM.set(this, void 0), zM.set(this, void 0), jM(this, vM, e, "f"), jM(this, wM, t, "f"), jM(this, yM, i, "f"), jM(this, _M, n, "f"), jM(this, xM, r, "f"), jM(this, bM, s, "f"), jM(this, EM, a, "f"), jM(this, MM, o, "f"), jM(this, SM, l, "f"), jM(this, TM, c, "f"), jM(this, AM, h, "f"), jM(this, UM, u, "f"), e.loadTrackData(d), e.generateMeshes(), i.generateMountains(e.getBounds()), h.setCursorHiddenWhenInactive(!0), jM(this, CM, new Jb(n, c), "f"), jM(this, kM, new aE(c), "f"), jM(this, RM, new Y_(n, null === (p = XM(this, UM, "f")) || void 0 === p ? void 0 : p.name), "f"), jM(this, PM, null, "f"), XM(this, gM, "m", GM).call(this), r.show(XM(this, vM, "f")), XM(this, SM, "f").addRecordEventListener(jM(this, DM, (() => {
-                    jM(this, IM, !0, "f")
-                }), "f")), jM(this, zM, new mM(c), "f"), XM(this, zM, "f").addToggleListener((e => {
+                gM.add(this), 
+                vM.set(this, void 0), 
+                wM.set(this, void 0), 
+                yM.set(this, void 0), 
+                _M.set(this, void 0), 
+                xM.set(this, void 0), 
+                bM.set(this, void 0),
+                EM.set(this, void 0), 
+                MM.set(this, void 0), 
+                SM.set(this, void 0), 
+                TM.set(this, void 0), 
+                AM.set(this, void 0), 
+                CM.set(this, void 0), 
+                kM.set(this, void 0), 
+                RM.set(this, void 0), 
+                PM.set(this, void 0), 
+                LM.set(this, null), 
+                IM.set(this, !1),
+                NM.set(this, null),
+                UM.set(this, void 0),
+                DM.set(this, void 0),
+                OM.set(this, void 0), 
+                FM.set(this, void 0), 
+                zM.set(this, void 0), 
+                jM(this, vM, e, "f"), 
+                jM(this, wM, t, "f"), 
+                jM(this, yM, i, "f"), 
+                jM(this, _M, n, "f"), 
+                jM(this, xM, r, "f"), 
+                jM(this, bM, s, "f"), 
+                jM(this, EM, a, "f"), 
+                jM(this, MM, o, "f"), 
+                jM(this, SM, l, "f"), 
+                jM(this, TM, c, "f"), 
+                jM(this, AM, h, "f"), 
+                jM(this, UM, u, "f"), 
+                e.loadTrackData(d),         // IMPORTANT - loads track data and other stuff below on track open
+                e.generateMeshes(), 
+                i.generateMountains(e.getBounds()), 
+                h.setCursorHiddenWhenInactive(!0), 
+                jM(this, CM, new Jb(n, c), "f"), 
+                jM(this, kM, new aE(c), "f"), 
+                jM(this, RM, new Y_(n, null === (p = XM(this, UM, "f")) || void 0 === p ? void 0 : p.name), "f"), 
+                jM(this, PM, null, "f"), 
+                XM(this, gM, "m", GM).call(this), 
+                r.show(XM(this, vM, "f")), 
+                XM(this, SM, "f").addRecordEventListener(
+                    jM(this, DM, (() => {
+                        jM(this, IM, !0, "f")
+                    }), "f")), 
+                jM(this, zM, new mM(c), "f"), 
+                XM(this, zM, "f").addToggleListener((e => {
                     var t, i;
                     e ? (null != XM(this, LM, "f") && (XM(this, LM, "f").audioVolume = 0), null != XM(this, NM, "f") && (XM(this, NM, "f").audioVolume = 0), XM(this, CM, "f").dispose(), XM(this, kM, "f").dispose(), XM(this, RM, "f").dispose(), null === (t = XM(this, PM, "f")) || void 0 === t || t.dispose(), jM(this, PM, null, "f"), r.hide(), s.setCamera(XM(this, zM, "f").camera)) : null != XM(this, LM, "f") && (null != XM(this, LM, "f") && (XM(this, LM, "f").audioVolume = 1), null != XM(this, NM, "f") && (XM(this, NM, "f").audioVolume = .5), jM(this, CM, new Jb(n, c), "f"), jM(this, kM, new aE(c), "f"), jM(this, RM, new Y_(n, null === (i = XM(this, UM, "f")) || void 0 === i ? void 0 : i.name), "f"), XM(this, gM, "m", GM).call(this), r.show(XM(this, vM, "f")), s.setCamera(XM(this, LM, "f").cameraOrbit))
                 })), XM(this, gM, "m", BM).call(this, o.carColors), XM(this, gM, "m", HM).call(this), XM(this, gM, "m", WM).call(this), window.addEventListener("keydown", jM(this, OM, (e => {

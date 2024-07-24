@@ -53,7 +53,6 @@ var global_mods = {
                 this.CAR_WIDTH_MULT = 1,
                 this.CAR_LENGTH_MULT = 1,
                 this.CAR_HEIGHT_MULT = 1;
-                OUTPUT("Loading default");
                 break;
             case "polycycle":
                 this.loadMod("default", false);
@@ -62,14 +61,12 @@ var global_mods = {
                 this.ROLL_INFLUENCE = 0;
                 this.ENGINE_SPEED_MULT = 3;
                 this.SUSPENSION_STIFFNESS_MULT = 1;
-                OUTPUT("Loading polycycle");
                 break;
             case "3widepolycar":
                 this.loadMod("default", false);
                 this.CAR_WIDTH_MULT = 3;
                 this.CAR_MODEL_PATH = "models/3xpolycar.glb";
                 this.ROLL_INFLUENCE = 3;
-                OUTPUT("Loading 3widepolycar");
                 break;
             case "tinypolycar":
                 this.loadMod("default", false);
@@ -79,7 +76,6 @@ var global_mods = {
                 this.WHEEL_RADIUS_MULT = 0.1;
                 this.CAR_MODEL_PATH = "models/0.1xyzpolycar.glb";
                 this.ROLL_INFLUENCE = 3;
-                OUTPUT("Loading tinypolycar");
                 break;
             case "lowgravity":
                 this.loadMod("default", false);
@@ -89,6 +85,8 @@ var global_mods = {
             if (this.updateWorld != undefined) this.updateWorld();
             if (this.updateGravity != undefined) this.updateGravity();
         };
+
+        OUTPUT("Loaded " + template);
     },
     currentTemplate: 0,
 
@@ -98,7 +96,7 @@ var global_mods = {
 }
 
 const gravity_meter = document.createElement("p");
-gravity_meter.innerHTML = "-9.82 m/s"
+gravity_meter.innerHTML = "g = -9.82";
 gravity_meter.style.color = "white";
 gravity_meter.style.position = "absolute";
 gravity_meter.style.left = "20px";
@@ -16993,7 +16991,7 @@ global_mods.loadMod("default");
                     const e = new Ammo.btVector3(0, -9.82 + global_mods.GRAVITY_CHANGE, 0);
                     hp(this, qf, "f").setGravity(e);
                     Ammo.destroy(e);
-                    gravity_meter.innerHTML = -9.82 + global_mods.GRAVITY_CHANGE;
+                    gravity_meter.innerHTML = "g = " + (-9.82 + global_mods.GRAVITY_CHANGE).toString();
                 }
             }
             dispose() {
